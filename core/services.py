@@ -1,6 +1,7 @@
 # core/services.py
 from storage.in_memory import InMemoryStorage
-from core.models import Project, Task, ProjectId, TaskId
+from core.models import Project, Task, ProjectId, TaskId, Status
+from typing import get_args
 
 class ProjectService:
     """Handles the business logic for projects."""
@@ -45,3 +46,16 @@ class TaskService:
         """Deletes a task."""
         if not self._storage.delete_task(task_id):
             raise ValueError(f"Task with ID {task_id} not found.")
+        
+    def change_task_status(self, task_id: TaskId, new_status: str) -> Task:
+        """Changes the status of a task after validation."""
+        # Validate that the new status is one of the allowed values
+        if new_status not in get_args(Status):
+            raise ValueError(f"Invalid status '{new_status}'. Must be one of {get_args(Status)}.")
+        
+        updated_task = self._storage.update_task_status(task_id, new_status) # type: ignore
+        
+        if updated_task is None:
+            raise ValueError(f"Task with ID {task_id} not found.")
+            
+        return updated_task    

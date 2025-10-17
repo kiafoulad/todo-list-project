@@ -4,7 +4,8 @@
 # We need to import all the classes and types we use from other files.
 from core.services import ProjectService, TaskService
 from storage.in_memory import InMemoryStorage
-from core.models import ProjectId, TaskId  # This import was missing for the IDs
+from core.models import ProjectId, TaskId, Status # This was missing key imports
+from typing import get_args # Needed for status validation
 
 # --- HELPER FUNCTIONS ---
 def print_projects(projects: list):
@@ -45,7 +46,9 @@ def main():
         print("5. Delete a project")
         print("6. Edit a project")
         print("7. Delete a task")
-        print("8. Exit")
+        print("8. Edit a task")
+        print("9. Change task status")
+        print("10. Exit")
         print("="*20)
 
         choice = input("Please select an option: ")
@@ -93,7 +96,6 @@ def main():
                 print(f"Project '{updated_project.name}' updated successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-        
         elif choice == "7":
             try:
                 task_id = TaskId(int(input("Enter the ID of the task to delete: ")))
@@ -101,11 +103,26 @@ def main():
                 print(f"Task with ID {task_id} deleted successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-
         elif choice == "8":
+            try:
+                task_id = TaskId(int(input("Enter the ID of the task to edit: ")))
+                new_title = input("Enter the new task title: ")
+                new_desc = input("Enter the new task description: ")
+                updated_task = task_service.edit_task(task_id, new_title, new_desc)
+                print(f"Task '{updated_task.title}' updated successfully.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        elif choice == "9":
+            try:
+                task_id = TaskId(int(input("Enter the task ID: ")))
+                new_status = input("Enter the new status (todo, doing, done): ")
+                updated_task = task_service.change_task_status(task_id, new_status)
+                print(f"Status of task '{updated_task.title}' changed to '{updated_task.status}'.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        elif choice == "10":
             print("Goodbye!")
             break
-
         else:
             print("Invalid option. Please try again.")
 

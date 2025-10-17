@@ -1,5 +1,5 @@
 # storage/in_memory.py
-from core.models import Project, Task, ProjectId, TaskId
+from core.models import Project, Task, ProjectId, TaskId, Status
 
 class InMemoryStorage:
     """In-memory storage for projects and tasks. Acts as a mock database."""
@@ -62,3 +62,10 @@ class InMemoryStorage:
             del self._tasks[task_id]
             return True  # Return True on successful deletion
         return False  # Return False if task was not found
+    def update_task_status(self, task_id: TaskId, new_status: Status) -> Task | None:
+        """Updates the status of a single task."""
+        if task_id in self._tasks:
+            task = self._tasks[task_id]
+            task.status = new_status
+            return task
+        return None
