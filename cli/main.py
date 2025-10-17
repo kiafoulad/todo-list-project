@@ -1,10 +1,9 @@
 # cli/main.py
-
-# --- IMPORT STATEMENTS ---
-# We need to import all the classes and types we use from other files.
+import os
+from dotenv import load_dotenv
 from core.services import ProjectService, TaskService
 from storage.in_memory import InMemoryStorage
-from core.models import ProjectId, TaskId  # This import was missing for the IDs
+from core.models import ProjectId, TaskId
 
 # --- HELPER FUNCTIONS ---
 def print_projects(projects: list):
@@ -12,7 +11,7 @@ def print_projects(projects: list):
     if not projects:
         print("No projects found.")
         return
-    
+
     print("Projects List:")
     for p in projects:
         print(f"  ID: {p.id}, Name: {p.name}, Description: {p.description}")
@@ -22,17 +21,25 @@ def print_tasks(tasks: list):
     if not tasks:
         print("This project has no tasks.")
         return
-        
+
     print("Tasks List:")
     for t in tasks:
-        print(f"  ID: {t.id}, Title: {t.title}, Status: {t.status}")
+        deadline_str = t.deadline.strftime('%Y-%m-%d') if t.deadline else "No deadline"
+        print(f"  ID: {t.id}, Title: {t.title}, Status: {t.status}, Deadline: {deadline_str}")
 
 # --- MAIN APPLICATION LOGIC ---
 def main():
-    # Initialize the application layers.
+    # Load environment variables from .env file
+    load_dotenv()
+
+    # Get configuration values, with defaults
+    MAX_PROJECTS = int(os.getenv("MAX_PROJECTS", 10))
+    MAX_TASKS = int(os.getenv("MAX_TASKS_PER_PROJECT", 20))
+
+    # Initialize the application layers with config
     storage = InMemoryStorage()
-    project_service = ProjectService(storage)
-    task_service = TaskService(storage)
+    project_service = ProjectService(storage, max_projects=MAX_PROJECTS)
+    task_service = TaskService(storage, max_tasks=MAX_TASKS)
 
     print("Welcome to the ToDoList App!")
 
@@ -45,7 +52,9 @@ def main():
         print("5. Delete a project")
         print("6. Edit a project")
         print("7. Delete a task")
-        print("8. Exit")
+        print("8. Edit a task")
+        print("9. Change task status")
+        print("10. Exit")
         print("="*20)
 
         choice = input("Please select an option: ")
@@ -66,10 +75,11 @@ def main():
                 project_id = ProjectId(int(input("Enter the project ID: ")))
                 title = input("Enter task title: ")
                 desc = input("Enter task description: ")
-                task = task_service.add_task_to_project(project_id, title, desc)
+                deadline_str = input("Enter deadline (YYYY-MM-DD) or leave empty: ")
+                task = task_service.add_task_to_project(project_id, title, desc, deadline_str or None)
                 print(f"Task '{task.title}' added successfully.")
-            except (ValueError, KeyError):
-                print("Error: Invalid input or project not found.")
+            except (ValueError, KeyError) as e:
+                print(f"Error: {e}")
         elif choice == "4":
             try:
                 project_id = ProjectId(int(input("Enter the project ID: ")))
@@ -93,7 +103,6 @@ def main():
                 print(f"Project '{updated_project.name}' updated successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-        
         elif choice == "7":
             try:
                 task_id = TaskId(int(input("Enter the ID of the task to delete: ")))
@@ -101,14 +110,29 @@ def main():
                 print(f"Task with ID {task_id} deleted successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-
         elif choice == "8":
+            try:
+                task_id = TaskId(int(input("Enter the ID of the task to edit: ")))
+                new_title = input("Enter the new task title: ")
+                new_desc = input("Enter the new task description: ")
+                new_deadline_str = input("Enter new deadline (YYYY-MM-DD) or leave empty: ")
+                updated_task = task_service.edit_task(task_id, new_title, new_desc, new_deadline_str or None)
+                print(f"Task '{updated_task.title}' updated successfully.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        elif choice == "9":
+            try:
+                task_id = TaskId(int(input("Enter the task ID: ")))
+                new_status = input("Enter the new status (todo, doing, done): ")
+                updated_task = task_service.change_task_status(task_id, new_status)
+                print(f"Status of task '{updated_task.title}' changed to '{updated_task.status}'.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        elif choice == "10":
             print("Goodbye!")
             break
-
         else:
             print("Invalid option. Please try again.")
 
-# This ensures the main function is called when the script is executed.
 if __name__ == "__main__":
     main()
