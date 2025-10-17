@@ -1,5 +1,6 @@
 # storage/in_memory.py
 from core.models import Project, Task, ProjectId, TaskId
+from datetime import datetime
 
 class InMemoryStorage:
     """In-memory storage for projects and tasks. Acts as a mock database."""
@@ -42,9 +43,16 @@ class InMemoryStorage:
         if project_id in self._projects:
             del self._projects[project_id]
     
-    def create_task(self, project_id: ProjectId, title: str, description: str) -> Task:
+    def create_task(self, project_id: ProjectId, title: str, description: str, deadline: datetime | None) -> Task:
+        """Creates a new task and adds it to the storage."""
         task_id = TaskId(self._next_task_id)
-        task = Task(id=task_id, project_id=project_id, title=title, description=description)
+        task = Task(
+            id=task_id,
+            project_id=project_id,
+            title=title,
+            description=description,
+            deadline=deadline  # This is the crucial addition
+        )
         self._tasks[task_id] = task
         self._next_task_id += 1
         return task
