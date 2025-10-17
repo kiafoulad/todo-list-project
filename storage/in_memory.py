@@ -55,3 +55,10 @@ class InMemoryStorage:
             if task.project_id == project_id
         ]
         return sorted(tasks, key=lambda t: t.created_at)
+    
+    def delete_task(self, task_id: TaskId) -> bool:
+        """Deletes a task by its ID."""
+        if task_id in self._tasks:
+            del self._tasks[task_id]
+            return True  # Return True on successful deletion
+        return False  # Return False if task was not found

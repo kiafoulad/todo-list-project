@@ -1,6 +1,6 @@
 # core/services.py
 from storage.in_memory import InMemoryStorage
-from core.models import Project, Task, ProjectId
+from core.models import Project, Task, ProjectId, TaskId
 
 class ProjectService:
     """Handles the business logic for projects."""
@@ -40,3 +40,8 @@ class TaskService:
 
     def get_project_tasks(self, project_id: ProjectId) -> list[Task]:
         return self._storage.get_tasks_by_project(project_id)
+    
+    def delete_task(self, task_id: TaskId) -> None:
+        """Deletes a task."""
+        if not self._storage.delete_task(task_id):
+            raise ValueError(f"Task with ID {task_id} not found.")

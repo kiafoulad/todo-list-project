@@ -1,9 +1,14 @@
 # cli/main.py
+
+# --- IMPORT STATEMENTS ---
+# We need to import all the classes and types we use from other files.
 from core.services import ProjectService, TaskService
 from storage.in_memory import InMemoryStorage
-from core.models import ProjectId
+from core.models import ProjectId, TaskId  # This import was missing for the IDs
 
+# --- HELPER FUNCTIONS ---
 def print_projects(projects: list):
+    """Prints a formatted list of projects."""
     if not projects:
         print("No projects found.")
         return
@@ -13,6 +18,7 @@ def print_projects(projects: list):
         print(f"  ID: {p.id}, Name: {p.name}, Description: {p.description}")
 
 def print_tasks(tasks: list):
+    """Prints a formatted list of tasks."""
     if not tasks:
         print("This project has no tasks.")
         return
@@ -21,7 +27,7 @@ def print_tasks(tasks: list):
     for t in tasks:
         print(f"  ID: {t.id}, Title: {t.title}, Status: {t.status}")
 
-
+# --- MAIN APPLICATION LOGIC ---
 def main():
     # Initialize the application layers.
     storage = InMemoryStorage()
@@ -37,9 +43,11 @@ def main():
         print("3. Add a task to a project")
         print("4. List tasks of a project")
         print("5. Delete a project")
-        print("6. Exit")
+        print("6. Edit a project")
+        print("7. Delete a task")
+        print("8. Exit")
         print("="*20)
-        
+
         choice = input("Please select an option: ")
 
         if choice == "1":
@@ -50,11 +58,9 @@ def main():
                 print(f"Project '{project.name}' created successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-
         elif choice == "2":
             projects = project_service.get_all_projects()
             print_projects(projects)
-
         elif choice == "3":
             try:
                 project_id = ProjectId(int(input("Enter the project ID: ")))
@@ -64,7 +70,6 @@ def main():
                 print(f"Task '{task.title}' added successfully.")
             except (ValueError, KeyError):
                 print("Error: Invalid input or project not found.")
-
         elif choice == "4":
             try:
                 project_id = ProjectId(int(input("Enter the project ID: ")))
@@ -72,7 +77,6 @@ def main():
                 print_tasks(tasks)
             except ValueError:
                 print("Error: Project ID must be a number.")
-        
         elif choice == "5":
             try:
                 project_id = ProjectId(int(input("Enter the ID of the project to delete: ")))
@@ -80,13 +84,31 @@ def main():
                 print(f"Project with ID {project_id} and all its tasks have been deleted.")
             except ValueError:
                 print("Error: Project ID must be a number.")
-
         elif choice == "6":
+            try:
+                project_id = ProjectId(int(input("Enter the ID of the project to edit: ")))
+                new_name = input("Enter the new project name: ")
+                new_desc = input("Enter the new project description: ")
+                updated_project = project_service.edit_project(project_id, new_name, new_desc)
+                print(f"Project '{updated_project.name}' updated successfully.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        
+        elif choice == "7":
+            try:
+                task_id = TaskId(int(input("Enter the ID of the task to delete: ")))
+                task_service.delete_task(task_id)
+                print(f"Task with ID {task_id} deleted successfully.")
+            except ValueError as e:
+                print(f"Error: {e}")
+
+        elif choice == "8":
             print("Goodbye!")
             break
-        
+
         else:
             print("Invalid option. Please try again.")
 
+# This ensures the main function is called when the script is executed.
 if __name__ == "__main__":
     main()
