@@ -62,3 +62,12 @@ class InMemoryStorage:
             del self._tasks[task_id]
             return True  # Return True on successful deletion
         return False  # Return False if task was not found
+    def update_project(self, project_id: ProjectId, new_name: str, new_description: str) -> Project | None:
+        if project_id in self._projects:
+            project = self._projects[project_id]
+            project.name = new_name
+            project.description = new_description
+            return project
+        return None # Return None if project is not found
+    
+    
