@@ -1,6 +1,6 @@
 # storage/in_memory.py
-from core.models import Project, Task, ProjectId, TaskId
 from datetime import datetime
+from core.models import Project, Task, ProjectId, TaskId, Status
 
 class InMemoryStorage:
     """In-memory storage for projects and tasks. Acts as a mock database."""
@@ -24,7 +24,7 @@ class InMemoryStorage:
 
     def get_all_projects(self) -> list[Project]:
         return sorted(self._projects.values(), key=lambda p: p.created_at)
-    
+
     def find_project_by_name(self, name: str) -> Project | None:
         for project in self._projects.values():
             if project.name == name:
@@ -32,9 +32,8 @@ class InMemoryStorage:
         return None
 
     def delete_project(self, project_id: ProjectId) -> None:
-        # Cascade Delete: Remove all tasks associated with the project.
         tasks_to_delete = [
-            task_id for task_id, task in self._tasks.items() 
+            task_id for task_id, task in self._tasks.items()
             if task.project_id == project_id
         ]
         for task_id in tasks_to_delete:
@@ -42,7 +41,16 @@ class InMemoryStorage:
         
         if project_id in self._projects:
             del self._projects[project_id]
-    
+
+    def update_project(self, project_id: ProjectId, new_name: str, new_description: str) -> Project | None:
+        """Updates the details of an existing project."""
+        if project_id in self._projects:
+            project = self._projects[project_id]
+            project.name = new_name
+            project.description = new_description
+            return project
+        return None
+
     def create_task(self, project_id: ProjectId, title: str, description: str, deadline: datetime | None) -> Task:
         """Creates a new task and adds it to the storage."""
         task_id = TaskId(self._next_task_id)
@@ -51,7 +59,7 @@ class InMemoryStorage:
             project_id=project_id,
             title=title,
             description=description,
-            deadline=deadline  # This is the crucial addition
+            deadline=deadline
         )
         self._tasks[task_id] = task
         self._next_task_id += 1
@@ -59,16 +67,32 @@ class InMemoryStorage:
 
     def get_tasks_by_project(self, project_id: ProjectId) -> list[Task]:
         tasks = [
-            task for task in self._tasks.values() 
+            task for task in self._tasks.values()
             if task.project_id == project_id
         ]
         return sorted(tasks, key=lambda t: t.created_at)
-    
+
     def delete_task(self, task_id: TaskId) -> bool:
         """Deletes a task by its ID."""
         if task_id in self._tasks:
             del self._tasks[task_id]
-            return True  # Return True on successful deletion
-        return False  # Return False if task was not found
-    
-    
+            return True
+        return False
+
+    def update_task(self, task_id: TaskId, new_title: str, new_description: str, new_deadline: datetime | None) -> Task | None:
+        """Updates the details of an existing task."""
+        if task_id in self._tasks:
+            task = self._tasks[task_id]
+            task.title = new_title
+            task.description = new_description
+            task.deadline = new_deadline
+            return task
+        return None
+
+    def update_task_status(self, task_id: TaskId, new_status: Status) -> Task | None:
+        """Updates the status of a single task."""
+        if task_id in self._tasks:
+            task = self._tasks[task_id]
+            task.status = new_status
+            return task
+        return None
