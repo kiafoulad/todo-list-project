@@ -26,5 +26,6 @@ class Task:
     title: str
     description: str
     status: Status = "todo"
+    # The deadline is optional (can be None) and is of type datetime
     deadline: datetime | None = None
     created_at: datetime = field(default_factory=datetime.now)

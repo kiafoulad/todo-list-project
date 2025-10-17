@@ -17,6 +17,7 @@ def print_projects(projects: list):
     for p in projects:
         print(f"  ID: {p.id}, Name: {p.name}, Description: {p.description}")
 
+
 def print_tasks(tasks: list):
     """Prints a formatted list of tasks."""
     if not tasks:
@@ -25,7 +26,9 @@ def print_tasks(tasks: list):
         
     print("Tasks List:")
     for t in tasks:
-        print(f"  ID: {t.id}, Title: {t.title}, Status: {t.status}")
+        # Format deadline nicely if it exists
+        deadline_str = t.deadline.strftime('%Y-%m-%d') if t.deadline else "No deadline"
+        print(f"  ID: {t.id}, Title: {t.title}, Status: {t.status}, Deadline: {deadline_str}")
 
 # --- MAIN APPLICATION LOGIC ---
 def main():
@@ -45,7 +48,9 @@ def main():
         print("5. Delete a project")
         print("6. Edit a project")
         print("7. Delete a task")
-        print("8. Exit")
+        print("8. Edit a task")
+        print("9. Change task status")
+        print("10. Exit")
         print("="*20)
 
         choice = input("Please select an option: ")
@@ -61,15 +66,17 @@ def main():
         elif choice == "2":
             projects = project_service.get_all_projects()
             print_projects(projects)
-        elif choice == "3":
+        elif choice == "3": # Add a task
             try:
                 project_id = ProjectId(int(input("Enter the project ID: ")))
                 title = input("Enter task title: ")
                 desc = input("Enter task description: ")
-                task = task_service.add_task_to_project(project_id, title, desc)
+                deadline_str = input("Enter deadline (YYYY-MM-DD) or leave empty: ")
+                # Pass the deadline string to the service layer
+                task = task_service.add_task_to_project(project_id, title, desc, deadline_str or None)
                 print(f"Task '{task.title}' added successfully.")
-            except (ValueError, KeyError):
-                print("Error: Invalid input or project not found.")
+            except (ValueError, KeyError) as e:
+                print(f"Error: {e}")
         elif choice == "4":
             try:
                 project_id = ProjectId(int(input("Enter the project ID: ")))
@@ -93,7 +100,6 @@ def main():
                 print(f"Project '{updated_project.name}' updated successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-        
         elif choice == "7":
             try:
                 task_id = TaskId(int(input("Enter the ID of the task to delete: ")))
@@ -101,14 +107,30 @@ def main():
                 print(f"Task with ID {task_id} deleted successfully.")
             except ValueError as e:
                 print(f"Error: {e}")
-
-        elif choice == "8":
+        elif choice == "8": # Edit a task
+            try:
+                task_id = TaskId(int(input("Enter the ID of the task to edit: ")))
+                new_title = input("Enter the new task title: ")
+                new_desc = input("Enter the new task description: ")
+                new_deadline_str = input("Enter new deadline (YYYY-MM-DD) or leave empty: ")
+                # Pass the new deadline string to the service layer
+                updated_task = task_service.edit_task(task_id, new_title, new_desc, new_deadline_str or None)
+                print(f"Task '{updated_task.title}' updated successfully.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        elif choice == "9":
+            try:
+                task_id = TaskId(int(input("Enter the task ID: ")))
+                new_status = input("Enter the new status (todo, doing, done): ")
+                updated_task = task_service.change_task_status(task_id, new_status)
+                print(f"Status of task '{updated_task.title}' changed to '{updated_task.status}'.")
+            except ValueError as e:
+                print(f"Error: {e}")
+        elif choice == "10":
             print("Goodbye!")
             break
-
         else:
             print("Invalid option. Please try again.")
 
-# This ensures the main function is called when the script is executed.
 if __name__ == "__main__":
     main()
