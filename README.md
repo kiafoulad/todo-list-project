@@ -43,7 +43,7 @@ Inside a project, users can:
 With the relational database layer, the application supports:
 
 - Querying **overdue open tasks** (deadline in the past, status not `done`).
-- Automatically changing the status of overdue tasks to `done` via a separate command.
+- Automatically changing the status of overdue tasks to `done` via dedicated commands.
 
 ---
 
@@ -62,6 +62,7 @@ With the relational database layer, the application supports:
 - **Environment Variables**: python-dotenv
 - **Tests**: pytest
 - **Container**: Docker Compose (for PostgreSQL service)
+- **Scheduling**: `schedule` library (for periodic overdue auto-close)
 
 ---
 
@@ -88,7 +89,8 @@ High-level folder structure:
 │   │   ├── project_service.py     # Business logic for projects
 │   │   └── task_service.py        # Business logic for tasks
 │   ├── commands/
-│   │   └── autoclose_overdue.py   # Command to auto-close overdue tasks
+│   │   ├── autoclose_overdue.py   # Command to auto-close overdue tasks once
+│   │   └── scheduler.py           # Command to run auto-close periodically
 │   └── exceptions/                # Custom exception types
 │
 ├── core/                          # Initial in-memory domain layer (Phase 1)
