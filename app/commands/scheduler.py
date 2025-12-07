@@ -1,57 +1,49 @@
 from __future__ import annotations
 
-import os
 import time
 from datetime import datetime
 
-from dotenv import load_dotenv
 import schedule
 
-from app.commands.autoclose_overdue import run_autoclose_overdue
+from app.db.session import get_session
+from app.repositories.project_repository import ProjectRepository
+from app.repositories.task_repository import TaskRepository
+from app.services.task_service import TaskService
 
 
-def _run_autoclose_job() -> None:
-    """Wrapper job that runs the autoclose command and logs basic info."""
-    now = datetime.utcnow().isoformat()
-    print(f"[scheduler] Running autoclose_overdue at {now} (UTC)")
-    closed_count = run_autoclose_overdue()
-    print(f"[scheduler] Closed {closed_count} task(s)")
+def autoclose_overdue_once() -> None:
+    now = datetime.utcnow()
+
+    with get_session() as session:
+        project_repo = ProjectRepository(session=session)
+        task_repo = TaskRepository(session=session)
+        service = TaskService(
+            task_repo=task_repo,
+            project_repo=project_repo,
+            max_tasks_per_project=20,
+        )
+
+        overdue_tasks = task_repo.list_overdue_open_tasks(now)
+
+        if not overdue_tasks:
+            print(f"[{now.isoformat()}] No overdue tasks to close.")
+            return
+
+        for task in overdue_tasks:
+            service.change_task_status(task_id=task.id, new_status="done")
+
+        print(f"[{now.isoformat()}] Closed {len(overdue_tasks)} overdue tasks.")
 
 
-def run_scheduler() -> None:
-    """
-    Run a simple in-process scheduler that periodically closes overdue tasks.
+def main() -> None:
+    autoclose_overdue_once()
 
-    Interval is controlled by AUTOCLOSE_INTERVAL_MINUTES in the environment,
-    defaulting to 60 minutes if not set.
-    """
-    load_dotenv()
+    schedule.every(5).minutes.do(autoclose_overdue_once)
 
-    interval_minutes = int(os.getenv("AUTOCLOSE_INTERVAL_MINUTES", "60"))
-    if interval_minutes <= 0:
-        raise ValueError("AUTOCLOSE_INTERVAL_MINUTES must be a positive integer.")
-
-    # Schedule the job to run periodically
-    schedule.every(interval_minutes).minutes.do(_run_autoclose_job)
-
-    print(
-        f"[scheduler] Started. "
-        f"Interval: every {interval_minutes} minute(s). Press Ctrl+C to stop."
-    )
-
-    # Optional: run once at startup
-    _run_autoclose_job()
-
-    # Main loop
     while True:
         schedule.run_pending()
         time.sleep(1)
 
 
 if __name__ == "__main__":
-    try:
-        run_scheduler()
-    except KeyboardInterrupt:
-        print("[scheduler] Stopped by user.")
-    except Exception as exc:
-        print(f"[scheduler] Error: {exc}")
+    main()
