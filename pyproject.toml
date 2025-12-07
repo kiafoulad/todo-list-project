@@ -1,18 +1,22 @@
-[project]
+[tool.poetry]
 name = "todo-list-project"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "kiafoulad",email = "kiafoulad81@gmail.com"}
-]
+description = "A CLI ToDoList application built with Python and OOP principles."
+authors = ["Kiavash Foulad <kiafoulad81@gmail.com>"]
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-]
+package-mode = false
 
-[tool.poetry]
-packages = [{include = "todo_list_project", from = "src"}]
+[tool.poetry.dependencies]
+python = "^3.11"
+python-dotenv = "^1.0.0"
+sqlalchemy = "^2.0"
+psycopg2-binary = "^2.9"
+alembic = "^1.13"
+schedule = "^1.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
