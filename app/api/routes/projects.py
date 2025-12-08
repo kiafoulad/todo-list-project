@@ -9,7 +9,7 @@ from app.api.schemas import ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.project_service import ProjectService
 
 router = APIRouter(
-    prefix="/api/v1/projects",
+    prefix="/projects",
     tags=["projects"],
 )
 
