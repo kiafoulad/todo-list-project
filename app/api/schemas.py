@@ -115,9 +115,9 @@ class TaskRead(BaseModel):
     title: str
     description: str
     status: str
-    deadline: Optional[datetime]
+    deadline: Optional[datetime] = None
     created_at: datetime
-    closed_at: Optional[datetime]
+    closed_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

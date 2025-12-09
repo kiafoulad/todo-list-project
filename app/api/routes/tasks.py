@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List
+from app.exceptions import NotFoundError  # Import NotFoundError from the correct module
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -31,9 +32,18 @@ def list_project_tasks(
     project_id: int,
     session: Session = Depends(get_session),
 ) -> List[TaskRead]:
+    """
+    Return all tasks for the given project.
+
+    First we ensure the project exists, otherwise we return 404.
+    Then we load all tasks for that project ordered by id.
+    """
     project_repo = ProjectRepository(session=session)
-    project = project_repo.get(project_id)
-    if project is None:
+
+    # Ensure project exists; ProjectRepository raises NotFoundError if not.
+    try:
+        project_repo.get_by_id(project_id)
+    except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
@@ -87,29 +97,47 @@ def update_task(
     session: Session = Depends(get_session),
 ) -> TaskRead:
     service = _get_task_service(session)
-
     task_repo = TaskRepository(session=session)
-    task = task_repo.get(task_id)
-    if task is None or task.project_id != project_id:
+
+    # Ensure the task exists and belongs to the given project
+    try:
+        task = task_repo.get_by_id(task_id)
+    except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found for this project",
         )
 
+    if task.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found for this project",
+        )
+
+    # Compute effective values for a partial update
     new_title = payload.title if payload.title is not None else task.title
     new_description = (
         payload.description if payload.description is not None else task.description
     )
-    new_deadline = payload.deadline if payload.deadline is not None else task.deadline
-    new_status = payload.status if payload.status is not None else task.status
 
+    if payload.deadline is not None:
+        new_deadline = payload.deadline
+    else:
+        new_deadline = task.deadline
+
+    # Convert deadline to 'YYYY-MM-DD' string expected by TaskService
+    if new_deadline is None:
+        new_deadline_str: str | None = None
+    else:
+        new_deadline_str = new_deadline.strftime("%Y-%m-%d")
+
+    # First update title / description / deadline via the service layer
     try:
-        updated = service.edit_task(
+        updated_task = service.edit_task(
             task_id=task_id,
-            title=new_title,
-            description=new_description,
-            deadline=new_deadline,
-            status=new_status,
+            new_title=new_title,
+            new_description=new_description,
+            new_deadline_str=new_deadline_str,
         )
     except Exception as exc:
         raise HTTPException(
@@ -117,8 +145,20 @@ def update_task(
             detail=str(exc),
         ) from exc
 
-    return updated
+    # Optionally update status if the client provided it
+    if payload.status is not None and payload.status != updated_task.status:
+        try:
+            updated_task = service.change_task_status(
+                task_id=task_id,
+                new_status=payload.status,
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
 
+    return updated_task
 
 @router.delete(
     "/{project_id}/tasks/{task_id}",
@@ -130,17 +170,32 @@ def delete_task(
     session: Session = Depends(get_session),
 ) -> None:
     service = _get_task_service(session)
-
     task_repo = TaskRepository(session=session)
-    task = task_repo.get(task_id)
-    if task is None or task.project_id != project_id:
+
+    # Ensure the task exists and belongs to this project
+    try:
+        task = task_repo.get_by_id(task_id)
+    except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found for this project",
         )
 
+    if task.project_id != project_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found for this project",
+        )
+
+    # Delegate deletion to the service layer
     try:
         service.delete_task(task_id=task_id)
+    except NotFoundError:
+        # In case the repository/service raises again
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found for this project",
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
